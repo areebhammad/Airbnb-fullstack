@@ -1,250 +1,99 @@
 import axios from "axios";
-import React, { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Link, Navigate, useParams } from "react-router-dom";
 import Perks from "../components/Perks";
+import PhotosUploader from "../components/PhotosUploader";
+import PlacesFormPage from "../components/PlacesFormPage";
+import AccountNav from "../components/AccountNav";
+import PlaceImg from "../components/PlaceImg";
 
 export default function PlacesPage() {
-  const [title, setTitle] = useState("");
-  const [address, setAddress] = useState("");
-  const [addedPhotos, setAddedPhotos] = useState([]);
-  const [photoLink, setPhotoLink] = useState("");
-  const [description, setDescription] = useState("");
-  const [perks, setPerks] = useState([]);
-  const [checkIn, setCheckIn] = useState("");
-  const [checkOut, setCheckOut] = useState("");
-  const [maxGuests, setMaxGuests] = useState(1);
-  const [extraInfo, setExtraInfo] = useState("");
-
-  function inputHeader(text) {
-    return <h2 className="text-2xl mt-4">{text}</h2>;
-  }
-
-  function inputDescription(text) {
-    return <p className="text-gray-500 text-sm">{text}</p>;
-  }
-
-  function preInput(header, description) {
-    return (
-      <>
-        {inputHeader(header)}
-        {inputDescription(description)}
-      </>
-    );
-  }
-
-  async function addPhotoByLink(e) {
-    e.preventDefault();
-    const { data: filename } = await axios.post("/upload-by-link", {
-      link: photoLink,
+  const [places, setPlaces] = useState([]);
+  useEffect(() => {
+    axios.get("/user-places").then(({ data }) => {
+      setPlaces(data);
     });
-    setAddedPhotos((prev) => {
-      return [...prev, filename];
-    });
-    setPhotoLink("");
-  }
+  }, []);
+  //  async function addPhotoByLink(e) {
+  //   e.preventDefault();
+  //   const { data: filename } = await axios.post("/upload-by-link", {
+  //     link: photoLink,
+  //   });
+  //   setAddedPhotos((prev) => {
+  //     return [...prev, filename];
+  //   });
+  //   setPhotoLink("");
+  // }
 
-  function uploadPhoto(e) {
-    const files = e.target.files;
-    const data = new FormData();
-    //first param here is the name "name can be anything & 2nd param should be the real file for which we are giving the name"
-    for (let i = 0; i < files.length; i++) {
-      data.append("photos", files[i]);
-    }
-    axios
-      .post("/upload", data, {
-        headers: { "Content-type": "multipart/form-data" },
-      })
-      .then((response) => {
-        const { data: filename } = response;
-        setAddedPhotos((prev) => {
-          return [...prev, ...filename];
-        });
-      });
-  }
+  // function uploadPhoto(e) {
+  //   const files = e.target.files;
+  //   const data = new FormData();
+  ////first param here is the name "name can be anything & 2nd param should be the real file for which we are giving the name"
+  //   for (let i = 0; i < files.length; i++) {
+  //     data.append("photos", files[i]);
+  //   }
+  //   axios
+  //     .post("/upload", data, {
+  //       headers: { "Content-type": "multipart/form-data" },
+  //     })
+  //     .then((response) => {
+  //       const { data: filename } = response;
+  //       setAddedPhotos((prev) => {
+  //         return [...prev, ...filename];
+  //       });
+  //     });
+  // }
 
-  const { action } = useParams();
+  // const { action } = useParams();
   // console.log(action)
   return (
     <div>
-      {action !== "new" && (
-        <div className="text-center">
-          <Link
-            className="inline-flex gap-2 bg-primary text-white px-4 py-2 rounded-full"
-            to={"/account/places/new"}
+      <AccountNav />
+      {/* {action !== "new" && ( */}
+      <div className="text-center">
+        <Link
+          className="inline-flex gap-2 bg-primary text-white px-4 py-2 rounded-full"
+          to={"/account/places/new"}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth="1.5"
+            stroke="currentColor"
+            className="w-6 h-6"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              className="w-6 h-6"
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 4.5v15m7.5-7.5h-15"
+            />
+          </svg>
+          Add new place
+        </Link>
+      </div>
+      <br />
+      <h2>list of all added pages</h2>
+      <div className="mt-4">
+        {places.length > 0 &&
+          places.map((place) => (
+            <Link
+              to={"/account/places/" + place._id}
+              key={place.title}
+              className="flex cursor-pointer gap-4 bg-gray-200 p-4 mt-4 rounded-2xl"
             >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M12 4.5v15m7.5-7.5h-15"
-              />
-            </svg>
-            Add new place
-          </Link>
-        </div>
-      )}
-      {action == "new" && (
-        <div>
-          <form action="">
-            {preInput(
-              "Title",
-              "Titles for your place should be short and catchy"
-            )}
-            {/* I have commented down and put a number to understand the steps that I took from beginning */}
-            {/* 2. {inputHeader("Title")}
-            {inputDescription(
-              "Titles for your place should be short and catchy"
-            )} */}
-            {/*1. <p className='text-gray-500 text-sm'>Titles for your place should be short and catchy</p> */}
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => {
-                setTitle(e.target.value);
-              }}
-              placeholder="title for example: my lovely appartment"
-            />
-            {preInput("Address", "Residence address")}
-            {/* {inputHeader("Address")}
-            {inputDescription("Residence address")} */}
-            {/* <p className='text-gray-500 text-sm'>Residence address</p> */}
-            <input
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="Address of the appratment"
-            />
-            {preInput("Photos", "min 5 pics for better engagement")}
-            {/* {inputHeader("Photos")}
-            {inputDescription("min 5 pics for better engagement")} */}
-            {/* <p className='text-gray-500 text-sm'>min 5 pics for better engagement</p> */}
-            <div className="flex gap-2">
-              <input
-                className=""
-                type="text"
-                value={photoLink}
-                onChange={(e) => setPhotoLink(e.target.value)}
-                placeholder="Add using a link"
-              />
-              <button
-                onClick={addPhotoByLink}
-                className="bg-primary text-white px-4 py-2 rounded-xl"
-              >
-                Add&nbsp;photo
-              </button>
-            </div>
-            <div className="mt-2 grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-              <label className="cursor-pointer flex h-60 w-80 items-center gap-1 justify-center border bg-slate-100 px-2 rounded-2xl text-2xl text-gray-600 hover:bg-slate-200">
-                Upload
-                <input
-                  type="file"
-                  multiple
-                  className="hidden"
-                  onChange={uploadPhoto}
-                />
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="currentColor"
-                  className="w-6 h-6"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M9 8.25H7.5a2.25 2.25 0 00-2.25 2.25v9a2.25 2.25 0 002.25 2.25h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25H15m0-3l-3-3m0 0l-3 3m3-3V15"
-                  />
-                </svg>
-              </label>
-              {addedPhotos.length > 0 &&
-                addedPhotos.map((link, index) => (
-                  <div>
-                    {
-                      <img
-                        key={index}
-                        src={"http://localhost:1337/upload/" + link}
-                        className="rounded-3xl px-3 h-60 w-full object-cover"
-                      />
-                    }
-                    {console.log("http://localhost:1337/upload" + link)}
-                  </div>
-                ))}
-            </div>
-            {preInput(
-              "Description",
-              "Write a full descriptiion about the residence"
-            )}
-            {/* {inputHeader("Description")}
-            {inputDescription("Write a full descriptiion about the residence")} */}
-            {/* <p className='text-gray-500 text-sm'>Write a full descriptiion about the residence</p> */}
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-            {preInput("Perks", "Select all the perks of this place")}
-            <Perks
-              selected={perks}
-              onChange={(e) => setPerks(e.target.value)}
-            />
-          </form>
-          {preInput("Extra Information", "house rules, etc...")}
-          {/* {inputHeader("Extra Information")}
-          {inputDescription("house rules, etc...")} */}
-          {/* <p className='text-gray-500 text-sm'>house rules, etc...</p> */}
-          <textarea
-            value={extraInfo}
-            onChange={(e) => setExtraInfo(e.target.value)}
-          />
-          {preInput(
-            "Check in & out times",
-            "add check in and out times, remember to have sometime in between each guests"
-          )}
-          {/* {inputHeader("Check in & out times")}
-          {inputDescription(
-            "add check in and out times, remember to have sometime in between each guests"
-          )} */}
-          {/* <h2 className='text-xl mt-4'>Check in & out times</h2>
-            <p className='text-gray-500 text-sm'>add check in and out times, remember to have sometime in between each guests</p> */}
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3 ">
-            <div className="-mt-1">
-              <h3>check in time</h3>
-              <input
-                type="text"
-                value={checkIn}
-                onChange={(e) => setCheckIn(e.target.value)}
-                placeholder="14:00"
-              />
-            </div>
-            <div className="-mt-1">
-              <h3>check out time</h3>
-              <input
-                type="text"
-                value={checkOut}
-                onChange={(e) => setCheckOut(e.target.value)}
-                placeholder="16:00"
-              />
-            </div>
-            <div className="-mt-1">
-              <h3>Max number of guests</h3>
-              <input
-                type="number"
-                value={maxGuests}
-                onChange={(e) => setMaxGuests(e.target.value)}
-                placeholder="11"
-              />
-            </div>
-          </div>
-          <button className="primary-btn my-4">Save</button>
-        </div>
-      )}
+              <div className="flex w-32 h-32 bg-gray-300 grow shrink-0">
+                <PlaceImg place={place} />
+              </div>
+              <div className="grow-0 shrink">
+                <h2 className=" text-xl">{place?.title}</h2>
+                <p className="text-sm mt-2">{place.description}</p>
+              </div>
+            </Link>
+          ))}
+      </div>
+      {/* )} */}
+      {/* {action == "new" && <PlacesFormPage />} */}
     </div>
   );
 }

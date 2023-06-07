@@ -1,9 +1,10 @@
-import React from "react";
-
 export default function Perks({ selected, onChange }) {
   function handleCheckboxClick(e) {
-    const { name, checked } = e.target;
-    console.log(name, checked);
+    const { checked, name } = e.target;
+    // console.log(name, checked);
+    // if (checked !== undefined && checked !== null) {
+    //   onchange([...selected, name]);
+    // }
     if (checked) {
       onChange([...selected, name]);
     } else {
@@ -18,7 +19,12 @@ export default function Perks({ selected, onChange }) {
     <div>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
         <label className="border p-4 rounded-2xl flex gap-2 items-center">
-          <input type="checkbox" name="wi-fi" onChange={handleCheckboxClick} />
+          <input
+            type="checkbox"
+            checked={selected.includes("wi-fi")}
+            name="wi-fi"
+            onChange={handleCheckboxClick}
+          />
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -38,6 +44,7 @@ export default function Perks({ selected, onChange }) {
         <label className="border p-4 rounded-2xl flex gap-2 items-center">
           <input
             type="checkbox"
+            checked={selected.includes("parking")}
             name="parking"
             onChange={handleCheckboxClick}
           />
@@ -58,7 +65,12 @@ export default function Perks({ selected, onChange }) {
           <span>Free car parking</span>
         </label>
         <label className="border p-4 rounded-2xl flex gap-2 items-center">
-          <input type="checkbox" name="tv" onChange={handleCheckboxClick} />
+          <input
+            type="checkbox"
+            checked={selected.includes("tv")}
+            name="tv"
+            onChange={handleCheckboxClick}
+          />
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -76,7 +88,12 @@ export default function Perks({ selected, onChange }) {
           <span>Tv</span>
         </label>
         <label className="border p-4 rounded-2xl flex gap-2 items-center">
-          <input type="checkbox" name="pets" onChange={handleCheckboxClick} />
+          <input
+            type="checkbox"
+            checked={selected.includes("pets")}
+            name="pets"
+            onChange={handleCheckboxClick}
+          />
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -96,6 +113,7 @@ export default function Perks({ selected, onChange }) {
         <label className="border p-4 rounded-2xl flex gap-2 items-center">
           <input
             type="checkbox"
+            checked={selected.includes("entrance")}
             name="entrance"
             onChange={handleCheckboxClick}
           />
@@ -116,7 +134,12 @@ export default function Perks({ selected, onChange }) {
           <span>Private Entrance</span>
         </label>
         <label className="border p-4 rounded-2xl flex gap-2 items-center">
-          <input type="checkbox" name="radio" onChange={handleCheckboxClick} />
+          <input
+            type="checkbox"
+            checked={selected.includes("radio")}
+            name="radio"
+            onChange={handleCheckboxClick}
+          />
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"

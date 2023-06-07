@@ -4,6 +4,8 @@ const cookieParser = require("cookie-parser");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("./models/User.js");
+const Place = require("./models/Place.js");
+const Booking = require("./models/Booking.js");
 const { default: mongoose } = require("mongoose");
 const imageDownloader = require("image-downloader");
 const multer = require("multer");
@@ -30,6 +32,15 @@ app.use(
 );
 
 mongoose.connect(process.env.MONGO_URL);
+
+function getUserDataFromReq(req) {
+  return new Promise((resolve, rejects) => {
+    jwt.verify(req.cookies.token, jwtSecret, {}, async (err, user) => {
+      if (err) throw err;
+      resolve(user);
+    });
+  });
+}
 
 app.get("/test", (req, res) => {
   res.json("Test Okay");
@@ -90,7 +101,7 @@ app.get("/profile", (req, res) => {
 
 app.post("/upload-by-link", async (req, res) => {
   const { link } = req.body;
-  const newName = "/photo" + Date.now() + ".jpg";
+  const newName = "photo" + Date.now() + ".jpg";
   await imageDownloader.image({
     url: link,
     dest: __dirname + "/upload" + newName,
@@ -98,7 +109,7 @@ app.post("/upload-by-link", async (req, res) => {
   res.json(newName);
 });
 
-const photoMiddleware = multer({ dest: "upload" });
+const photoMiddleware = multer({ dest: "/upload" });
 app.post("/upload", photoMiddleware.array("photos", 100), (req, res) => {
   const uploadedFiles = [];
   for (let i = 0; i < req.files.length; i++) {
@@ -114,6 +125,122 @@ app.post("/upload", photoMiddleware.array("photos", 100), (req, res) => {
 
 app.post("/logout", (req, res) => {
   res.cookie("token", "").json(true);
+});
+
+app.post("/places", (req, res) => {
+  const { token } = req.cookies;
+  const {
+    title,
+    address,
+    addedPhotos,
+    description,
+    perks,
+    checkIn,
+    checkOut,
+    maxGuests,
+    price,
+  } = req.body;
+  jwt.verify(token, jwtSecret, {}, async (err, user) => {
+    if (err) throw err;
+    const placeDoc = await Place.create({
+      owner: user.id,
+      title,
+      address,
+      photos: addedPhotos,
+      description,
+      perks,
+      checkIn,
+      checkOut,
+      maxGuests,
+      price,
+    });
+    res.json(placeDoc);
+  });
+});
+
+app.get("/user-places", async (req, res) => {
+  const { token } = req.cookies;
+  jwt.verify(token, jwtSecret, {}, async (err, user) => {
+    const { id } = user;
+    res.json(await Place.find({ owner: id }));
+  });
+});
+
+app.get("/places/:id", async (req, res) => {
+  const { id } = req.params;
+  // req.json(req.params);
+  // console.log({ id });
+  res.json(await Place.findById(id));
+});
+
+app.put("/places", async (req, res) => {
+  mongoose.connect(process.env.MONGO_URL);
+  const { token } = req.cookies;
+  // const { id } = req.params;
+  const {
+    id,
+    title,
+    address,
+    addedPhotos,
+    description,
+    perks,
+    checkIn,
+    checkOut,
+    maxGuests,
+    price,
+  } = req.body;
+  jwt.verify(token, jwtSecret, {}, async (err, user) => {
+    if (err) throw err;
+    const placeDoc = await Place.findById(id);
+    if (user.id === placeDoc.owner.toString()) {
+      placeDoc.set({
+        title,
+        address,
+        photos: addedPhotos,
+        description,
+        perks,
+        checkIn,
+        checkOut,
+        maxGuests,
+        price,
+      });
+      await placeDoc.save();
+      res.json("ok");
+    }
+  });
+});
+
+app.get("/places", async (req, res) => {
+  res.json(await Place.find());
+});
+
+app.post("/bookings", async (req, res) => {
+  const userData = await getUserDataFromReq(req);
+
+  const { place, checkIn, checkOut, numberOfGuests, name, phone, price } =
+    req.body;
+  Booking.create({
+    place,
+    user: userData.id,
+    checkIn,
+    checkOut,
+    numberOfGuests,
+    name,
+    phone,
+    price,
+  })
+    .then((doc) => {
+      res.json(doc);
+    })
+    .catch((err) => {
+      throw err;
+    });
+});
+
+app.get("/bookings", async (req, res) => {
+  // const { token } = req.cookies;
+  const userData = await getUserDataFromReq(req);
+  res.json(await Booking.find({ user: userData.id }).populate("place"));
 });
 
 app.listen(1337);

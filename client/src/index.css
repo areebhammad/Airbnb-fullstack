@@ -3,11 +3,20 @@
 @tailwind utilities;
 
 input[type="text"],
+input[type="tel"],
 input[type="password"],
 input[type="email"],
 input[type="number"],
 textarea {
   @apply w-full border my-2 py-2 px-3 rounded-xl;
+}
+
+textarea {
+  height: 140px;
+}
+
+button {
+  @apply bg-gray-300;
 }
 
 button.primary-btn {
