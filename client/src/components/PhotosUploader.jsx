@@ -11,7 +11,7 @@ export default function PhotosUploader({ addedPhotos, onChange }) {
       link: photoLink,
     });
     onChange((prev) => {
-      return [...prev, ...filename];
+      return [...prev, filename];
     });
     setPhotoLink("");
   }
@@ -58,7 +58,7 @@ export default function PhotosUploader({ addedPhotos, onChange }) {
       <div className="flex gap-2">
         <input
           value={photoLink}
-          onChange={(ev) => setPhotoLink(ev.target.value)}
+          onChange={(e) => setPhotoLink(e.target.value)}
           type="text"
           placeholder={"Add using a link ....jpg"}
         />
@@ -79,7 +79,7 @@ export default function PhotosUploader({ addedPhotos, onChange }) {
                 alt=""
               />
               <button
-                onClick={(ev) => removePhoto(ev, link)}
+                onClick={(e) => removePhoto(e, link)}
                 className="cursor-pointer absolute bottom-1 right-1 text-white bg-black bg-opacity-50 rounded-2xl py-2 px-3"
               >
                 <svg
@@ -98,7 +98,7 @@ export default function PhotosUploader({ addedPhotos, onChange }) {
                 </svg>
               </button>
               <button
-                onClick={(ev) => selectAsMainPhoto(ev, link)}
+                onClick={(e) => selectAsMainPhoto(e, link)}
                 className="cursor-pointer absolute bottom-1 left-1 text-white bg-black bg-opacity-50 rounded-2xl py-2 px-3"
               >
                 {link === addedPhotos[0] && (

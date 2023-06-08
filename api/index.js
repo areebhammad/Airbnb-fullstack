@@ -1,3 +1,5 @@
+const { BlobServiceClient } = require("@azure/storage-blob");
+const { DefaultAzureCredential } = require("@azure/identity");
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
@@ -10,6 +12,7 @@ const { default: mongoose } = require("mongoose");
 const imageDownloader = require("image-downloader");
 const multer = require("multer");
 const fs = require("fs");
+const mime = require("mime-types");
 
 require("dotenv").config();
 const app = express();
@@ -27,11 +30,36 @@ app.use(cookieParser());
 app.use(
   cors({
     credentials: true,
-    origin: "http://localhost:5173",
+    origin: "https://airbnb-fullstack.netlify.app",
   })
 );
 
 mongoose.connect(process.env.MONGO_URL);
+
+async function uploadToAzureBlobStorage(path, originalFilename, mimetype) {
+  const blobServiceClient = new BlobServiceClient(
+    process.env.AZURE_STORAGE_CONNECTION_STRING,
+    new DefaultAzureCredential()
+  );
+
+  const containerName = "images";
+  const containerClient = blobServiceClient.getContainerClient(containerName);
+
+  const parts = originalFilename.split(".");
+  const ext = parts[parts.length - 1];
+  const newFilename = Date.now() + "." + ext;
+
+  const blockBlobClient = containerClient.getBlockBlobClient(newFilename);
+  await blockBlobClient.uploadFile(path, {
+    blobHTTPHeaders: {
+      blobContentType: mimetype,
+      blobCacheControl: "public, max-age=31536000",
+    },
+    metadata: { fileName: originalFilename },
+  });
+
+  return blockBlobClient.url;
+}
 
 function getUserDataFromReq(req) {
   return new Promise((resolve, rejects) => {
@@ -104,21 +132,30 @@ app.post("/upload-by-link", async (req, res) => {
   const newName = "photo" + Date.now() + ".jpg";
   await imageDownloader.image({
     url: link,
-    dest: __dirname + "/upload" + newName,
+    // dest: __dirname + "/upload" + newName,
+    dest: "/tmp/" + newName,
   });
-  res.json(newName);
+  const url = await uploadToAzureBlobStorage(
+    "/tmp/" + newName,
+    newName,
+    mime.lookup("/tmp/" + newName)
+  );
+  res.json(url);
 });
 
-const photoMiddleware = multer({ dest: "/upload" });
-app.post("/upload", photoMiddleware.array("photos", 100), (req, res) => {
+// const photoMiddleware = multer({ dest: "/upload" });
+const photoMiddleware = multer({ dest: "/tmp" });
+app.post("/upload", photoMiddleware.array("photos", 100), async (req, res) => {
   const uploadedFiles = [];
   for (let i = 0; i < req.files.length; i++) {
-    const { path, originalname } = req.files[i];
-    const parts = originalname.split(".");
-    const ext = parts[parts.length - 1];
-    const newPath = path + "." + ext;
-    fs.renameSync(path, newPath);
-    uploadedFiles.push(newPath.replace("upload/", ""));
+    const { path, originalname, mimetype } = req.files[i];
+    const url = await uploadToAzureBlobStorage(path, originalname, mimetype);
+    uploadedFiles.push(url);
+    // const parts = originalname.split(".");
+    // const ext = parts[parts.length - 1];
+    // const newPath = path + "." + ext;
+    // fs.renameSync(path, newPath);
+    // uploadedFiles.push(newPath.replace("upload/", ""));
   }
   res.json(uploadedFiles);
 });
@@ -161,6 +198,7 @@ app.post("/places", (req, res) => {
 app.get("/user-places", async (req, res) => {
   const { token } = req.cookies;
   jwt.verify(token, jwtSecret, {}, async (err, user) => {
+    if (err) throw err;
     const { id } = user;
     res.json(await Place.find({ owner: id }));
   });
