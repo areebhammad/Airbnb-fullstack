@@ -31,7 +31,7 @@ app.use("/upload", express.static(__dirname + "/upload"));
 app.use(
   cors({
     credentials: true,
-    origin: "http://localhost:5173",
+    origin: "https://airbnb-fullstack.netlify.app/",
   })
 );
 
