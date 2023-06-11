@@ -1,12 +1,18 @@
+const {
+  BlobServiceClient,
+  StorageSharedKeyCredential,
+} = require("@azure/storage-blob");
+const { DefaultAzureCredential } = require("@azure/identity");
 const express = require("express");
 const cors = require("cors");
-const mongoose = require("mongoose");
+const cookieParser = require("cookie-parser");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("./models/User.js");
 const Place = require("./models/Place.js");
 const Booking = require("./models/Booking.js");
-const cookieParser = require("cookie-parser");
+const { default: mongoose } = require("mongoose");
+const imageDownloader = require("image-downloader");
 const multer = require("multer");
 const fs = require("fs");
 const mime = require("mime-types");
@@ -15,19 +21,15 @@ require("dotenv").config();
 const app = express();
 
 const bcryptSalt = bcrypt.genSaltSync(10);
-const jwtSecret = "fasefraw4r5r3wq45wdfgw34twdfg";
-const containerName = "images"; // Azure Blob Storage container name
+const jwtSecret = "adewsdfgtrefghjuyth";
+//or
+// const bcryptSalt = await bcrypt.genSalt(8)
 
-// Azure Blob Storage setup
-const { BlobServiceClient } = require("@azure/storage-blob");
-const blobServiceClient = BlobServiceClient.fromConnectionString(
-  process.env.AZURE_STORAGE_CONNECTION_STRING
-);
-const containerClient = blobServiceClient.getContainerClient(containerName);
-
+//req.body is in json so we need to use express.json()
 app.use(express.json());
-app.use(cookieParser());
 app.use("/upload", express.static(__dirname + "/upload"));
+app.use(cookieParser());
+
 app.use(
   cors({
     credentials: true,
@@ -35,13 +37,32 @@ app.use(
   })
 );
 
-async function uploadToAzureBlobStorage(path, originalFilename, mime) {
-  const blockBlobClient = containerClient.getBlockBlobClient(originalFilename);
-  await blockBlobClient.uploadFile(path);
-  return blockBlobClient.url;
-}
+mongoose.connect(process.env.MONGO_URL);
 
-// Rest of your code...
+// async function uploadToAzureBlobStorage(path, originalFilename, mimetype) {
+//   const blobServiceClient = new BlobServiceClient(
+//     process.env.AZURE_STORAGE_CONNECTION_STRING,
+//     new DefaultAzureCredential()
+//   );
+
+// const containerName = "images";
+// const containerClient = blobServiceClient.getContainerClient(containerName);
+
+// const parts = originalFilename.split(".");
+// const ext = parts[parts.length - 1];
+// const newFilename = Date.now() + "." + ext;
+
+//   const blockBlobClient = containerClient.getBlockBlobClient(newFilename);
+//   await blockBlobClient.uploadFile(path, {
+//     blobHTTPHeaders: {
+//       blobContentType: mimetype,
+//       blobCacheControl: "public, max-age=31536000",
+//     },
+//     metadata: { fileName: originalFilename },
+//   });
+
+//   return blockBlobClient.url;
+// }
 
 function getUserDataFromReq(req) {
   return new Promise((resolve, rejects) => {
@@ -53,17 +74,15 @@ function getUserDataFromReq(req) {
 }
 
 app.get("/test", (req, res) => {
-  mongoose.connect(process.env.MONGO_URL);
-  res.json("test ok");
+  res.json("Test Okay");
 });
 
 app.post("/register", async (req, res) => {
-  mongoose.connect(process.env.MONGO_URL);
-  const { name, email, password } = req.body;
-
+  //req.body requires app.use(express.json());
+  const { names, email, password } = req.body;
   try {
     const userDoc = await User.create({
-      name,
+      names,
       email,
       password: bcrypt.hashSync(password, bcryptSalt),
     });
@@ -74,17 +93,13 @@ app.post("/register", async (req, res) => {
 });
 
 app.post("/login", async (req, res) => {
-  mongoose.connect(process.env.MONGO_URL);
   const { email, password } = req.body;
   const userDoc = await User.findOne({ email });
   if (userDoc) {
     const passOk = bcrypt.compareSync(password, userDoc.password);
     if (passOk) {
       jwt.sign(
-        {
-          email: userDoc.email,
-          id: userDoc._id,
-        },
+        { email: userDoc.email, id: userDoc._id },
         jwtSecret,
         {},
         (err, token) => {
@@ -93,14 +108,13 @@ app.post("/login", async (req, res) => {
         }
       );
     } else {
-      res.status(422).json("pass not ok");
+      res.json("pass not Ok");
     }
   } else {
-    res.json("not found");
+    res.status(422).json("Wrong password");
   }
 });
 
-// Rest of your code...
 app.get("/profile", (req, res) => {
   const { token } = req.cookies;
   if (token) {
@@ -114,18 +128,40 @@ app.get("/profile", (req, res) => {
   }
 });
 
-const photosMiddleware = multer({ dest: "/images" });
-app.post("/upload", photosMiddleware.array("photos", 100), async (req, res) => {
+console.log(__dirname);
+app.post("/upload-by-link", async (req, res) => {
+  const { link } = req.body;
+  const newName = "photo" + Date.now() + ".jpg";
+  await imageDownloader.image({
+    url: link,
+    dest: __dirname + "/upload" + newName,
+    // dest: "/tmp/" + newName,
+  });
+  // const url = await uploadToAzureBlobStorage(
+  //   "/tmp/" + newName,
+  //   newName,
+  //   mime.lookup("/tmp/" + newName)
+  // );
+  res.json(newName);
+});
+
+const photoMiddleware = multer({ dest: "/upload" });
+// const photoMiddleware = multer({ dest: "/tmp" });
+app.post("/upload", photoMiddleware.array("photos", 100), async (req, res) => {
   const uploadedFiles = [];
   for (let i = 0; i < req.files.length; i++) {
     const { path, originalname, mimetype } = req.files[i];
-    const url = await uploadToAzureBlobStorage(path, originalname, mimetype);
-    uploadedFiles.push(url);
+    // const url = await uploadToAzureBlobStorage(path, originalname, mimetype);
+    // uploadedFiles.push(url);
+    const parts = originalname.split(".");
+    const ext = parts[parts.length - 1];
+    const newPath = path + "." + ext;
+    fs.renameSync(path, newPath);
+    uploadedFiles.push(newPath.replace("upload/", ""));
   }
   res.json(uploadedFiles);
 });
 
-// Rest of your code...
 app.post("/logout", (req, res) => {
   res.cookie("token", "").json(true);
 });
