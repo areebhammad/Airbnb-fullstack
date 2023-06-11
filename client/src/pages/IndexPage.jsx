@@ -22,7 +22,7 @@ export default function IndexPage() {
                 <img
                   key={place?._id}
                   className=" rounded-2xl object-cover aspect-square"
-                  src={"http://localhost:1337/" + place.photos?.[0]}
+                  src={place.photos?.[0]}
                   alt=""
                 />
               )}
